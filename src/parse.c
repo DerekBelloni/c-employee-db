@@ -44,7 +44,6 @@ int read_employees(int fd, struct dbheader_t *dbhdr, struct employee_t **employe
 
     int count = dbhdr->count;
 
-    // Create a buffer of space in memory to read off the disk
     struct employee_t *employees = calloc(count, sizeof(struct employee_t));
     if (employees == -1) {
         printf("Malloc failed\n");
@@ -53,7 +52,6 @@ int read_employees(int fd, struct dbheader_t *dbhdr, struct employee_t **employe
 
     read(fd, employees, count*sizeof(struct employee_t));
 
-    // Similar to how we had to unpack the header, we need to unpack numeric information about the employee
     int i = 0;
     for(; i < count; i++) {
         employees[i].hours = ntohl(employees[i].hours);
@@ -95,30 +93,25 @@ int remove_employee(int fd, struct dbheader_t *dbhdr, struct employee_t *employe
     int removed = 0;
     int i, j;
 
-    // Loop through the employees to find the one to remove
     for (i = 0; i < dbhdr->count; i++) {
         if (strcmp(employees[i].name, removestring) == 0) {
-            // Found the employee to remove, shift the rest down
             for (j = i; j < dbhdr->count - 1; j++) {
                 employees[j] = employees[j + 1];
             }
             removed = 1;
-            dbhdr->count--; // Decrement the employee count
+            dbhdr->count--; 
             dbhdr->filesize = sizeof(struct dbheader_t) + (sizeof(struct employee_t) * dbhdr->count);
-            break; // Exit the loop as we found our employee
+            break; 
         }
     }
 
     if (removed) {
-        // Successfully removed an employee, update filesize accordingly
         if (ftruncate(fd, dbhdr->filesize) == -1) {
             perror("Failed to truncate file");
-            // Handle error appropriately
             return STATUS_ERROR;
         }
         return STATUS_SUCCESS;
     } else {
-        // Employee not found
         return STATUS_ERROR;
     }
 }
@@ -136,7 +129,6 @@ int output_file(int fd, struct dbheader_t *dbhdr, struct employee_t *employees) 
     dbhdr->magic = htonl(dbhdr->magic);
     dbhdr->filesize = htonl(sizeof(struct dbheader_t) + (sizeof(struct employee_t) * realcount));
 
-    // we need to bring the cursor back to the beginning of the file
     lseek(fd, 0, SEEK_SET);
 
     write(fd, dbhdr, sizeof(struct dbheader_t));
@@ -151,7 +143,6 @@ int output_file(int fd, struct dbheader_t *dbhdr, struct employee_t *employees) 
 }
 
 int validate_db_header(int fd, struct dbheader_t **headerOut) {
-    // take a file
     if (fd < 0) {
         printf("Received bad file descriptor from the user\n");
         return STATUS_ERROR;
@@ -163,21 +154,17 @@ int validate_db_header(int fd, struct dbheader_t **headerOut) {
         return STATUS_ERROR;
     }
     
-    // read the db header out of the file, put it in the structure and return to user
     if (read(fd, header, sizeof(struct dbheader_t)) != sizeof(struct dbheader_t)) {
         perror("read");
         free(header);
         return STATUS_ERROR;
     }
 
-    // Once data is readin to the header pointer, we need to unpack it
-    // unpack to host endian
     header->version = ntohs(header->version);
     header->count = ntohs(header->count);
     header->magic = ntohl(header->magic);
     header->filesize = ntohl(header->filesize);
 
-    // make sure all of the fields reflected in the header are valid
     if (header->version != 1) {
         printf("Improper header version\n");
         free(header);

@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) {
     struct dbheader_t *dbhdr = NULL;
     struct employee_t *employees = NULL;
 
-    // The colons after the flag indicate data is expected with the flag
     while ((c = getopt(argc, argv, "nf:a:lr:h:")) != -1) {
         switch (c) {
             case 'n':
